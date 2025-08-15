@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /signup
+Allow: /login
+Allow: /upgrade
+Allow: /terms
+Allow: /privacy
+
+Disallow: /api/
+Disallow: /_next/
+
+Sitemap: http://localhost:3000/sitemap.xml
