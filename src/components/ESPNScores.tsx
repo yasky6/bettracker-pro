@@ -202,16 +202,16 @@ export default function ESPNScores() {
                         </div>
                         
                         {/* Live Stats */}
-                        {competition.situation && (
+                        {(competition as any).situation && (
                           <div className="grid grid-cols-2 gap-2">
                             <div className="bg-gray-800/50 rounded-lg p-2">
                               <p className="text-xs text-gray-400">Game State</p>
-                              <p className="text-sm font-bold text-white">{competition.situation.shortDownDistanceText}</p>
-                              <p className="text-xs text-cyan-400">{competition.situation.possessionText}</p>
+                              <p className="text-sm font-bold text-white">{(competition as any).situation?.shortDownDistanceText}</p>
+                              <p className="text-xs text-cyan-400">{(competition as any).situation?.possessionText}</p>
                             </div>
                             <div className="bg-gray-800/50 rounded-lg p-2">
                               <p className="text-xs text-gray-400">Last Play</p>
-                              <p className="text-sm font-bold text-white">{competition.situation.lastPlay?.text || 'N/A'}</p>
+                              <p className="text-sm font-bold text-white">{(competition as any).situation?.lastPlay?.text || 'N/A'}</p>
                             </div>
                           </div>
                         )}
