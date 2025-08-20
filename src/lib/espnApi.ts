@@ -10,6 +10,8 @@ export interface ESPNGame {
     type: {
       name: string;
       state: string;
+      detail?: string;
+      shortDetail?: string;
     };
   };
   competitions: Array<{
@@ -29,6 +31,13 @@ export interface ESPNGame {
       details: string;
       overUnder: number;
     }>;
+    situation?: {
+      shortDownDistanceText?: string;
+      possessionText?: string;
+      lastPlay?: {
+        text?: string;
+      };
+    };
   }>;
 }
 
