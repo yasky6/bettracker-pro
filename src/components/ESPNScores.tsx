@@ -180,7 +180,7 @@ export default function ESPNScores() {
                         {/* Inning & Situation */}
                         <div className="bg-gray-800/50 rounded-lg p-3">
                           <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-bold text-cyan-400">{game.status.type.detail || game.status.type.shortDetail || 'Live'}</span>
+                            <span className="text-sm font-bold text-cyan-400">{(game.status.type as any).detail || (game.status.type as any).shortDetail || 'Live'}</span>
                             <span className="text-sm text-white">
                               {selectedSport === 'mlb' ? '2 Outs' :
                                selectedSport === 'nfl' ? '2nd & 7' :
