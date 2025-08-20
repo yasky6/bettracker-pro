@@ -1,6 +1,35 @@
 'use client';
 
+import { useState } from 'react';
+
 export default function UpgradePage() {
+  const [loading, setLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId: 'price_1QKxyzABC123', // Replace with your Stripe price ID
+          email: user.email || 'user@example.com'
+        })
+      });
+      
+      const { sessionId } = await response.json();
+      const stripe = await import('@stripe/stripe-js').then(m => m.loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!));
+      
+      if (stripe) {
+        await stripe.redirectToCheckout({ sessionId });
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Payment failed. Please try again.');
+    }
+    setLoading(false);
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 py-12">
       <div className="max-w-4xl mx-auto px-4">
@@ -101,8 +130,12 @@ export default function UpgradePage() {
           </div>
 
           {/* CTA Button */}
-          <button className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white font-black text-xl py-4 px-8 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-cyan-500/25">
-            Start Pro Subscription - $0.99/month
+          <button 
+            onClick={handleUpgrade}
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white font-black text-xl py-4 px-8 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {loading ? 'Processing...' : 'Start Pro Subscription - $0.99/month'}
           </button>
           
           <p className="text-center text-gray-400 text-sm mt-4">
