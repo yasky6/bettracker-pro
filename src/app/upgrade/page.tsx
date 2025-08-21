@@ -18,17 +18,34 @@ export default function UpgradePage() {
         })
       });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Checkout failed');
+      }
+      
       const { sessionId } = await response.json();
+      
+      if (!sessionId) {
+        throw new Error('No session ID received');
+      }
+      
       const stripe = await import('@stripe/stripe-js').then(m => m.loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!));
       
-      if (stripe) {
-        await stripe.redirectToCheckout({ sessionId });
+      if (!stripe) {
+        throw new Error('Stripe failed to load');
+      }
+      
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      
+      if (error) {
+        throw new Error(error.message);
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Payment failed. Please try again.');
+      alert(`Payment failed: ${error instanceof Error ? error.message : 'Please try again.'}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 py-12">
