@@ -15,9 +15,19 @@ export default function ESPNScores() {
 
   const loadScores = async () => {
     setLoading(true);
-    const scoresData = await fetchESPNScoreboard(selectedSport);
-    setGames(scoresData);
-    setLoading(false);
+    try {
+      const scoresData = await fetchESPNScoreboard(selectedSport);
+      if (Array.isArray(scoresData)) {
+        setGames(scoresData);
+      } else {
+        setGames([]);
+      }
+    } catch (error) {
+      console.error('Error loading scores:', error);
+      setGames([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getGameStatus = (game: ESPNGame) => {
@@ -106,9 +116,13 @@ export default function ESPNScores() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {games.slice(0, 8).map((game) => {
+            if (!game || !game.competitions || !game.competitions[0]) {
+              return null;
+            }
+            
             const competition = game.competitions[0];
-            const homeTeam = competition.competitors.find(c => c.homeAway === 'home');
-            const awayTeam = competition.competitors.find(c => c.homeAway === 'away');
+            const homeTeam = competition.competitors?.find(c => c.homeAway === 'home');
+            const awayTeam = competition.competitors?.find(c => c.homeAway === 'away');
             
             return (
               <div key={game.id} className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-5 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
@@ -134,12 +148,15 @@ export default function ESPNScores() {
                         {awayTeam.team.logo && (
                           <img 
                             src={awayTeam.team.logo} 
-                            alt={awayTeam.team.displayName}
+                            alt={awayTeam.team.displayName || 'Team logo'}
                             className="w-8 h-8 rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
                           />
                         )}
                         <div>
-                          <p className="text-sm font-bold text-white">{awayTeam.team.displayName}</p>
+                          <p className="text-sm font-bold text-white">{awayTeam.team?.displayName || 'Away Team'}</p>
                           <p className="text-xs text-gray-400">Away</p>
                         </div>
                       </div>
@@ -156,12 +173,15 @@ export default function ESPNScores() {
                         {homeTeam.team.logo && (
                           <img 
                             src={homeTeam.team.logo} 
-                            alt={homeTeam.team.displayName}
+                            alt={homeTeam.team.displayName || 'Team logo'}
                             className="w-8 h-8 rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
                           />
                         )}
                         <div>
-                          <p className="text-sm font-bold text-white">{homeTeam.team.displayName}</p>
+                          <p className="text-sm font-bold text-white">{homeTeam.team?.displayName || 'Home Team'}</p>
                           <p className="text-xs text-gray-400">Home</p>
                         </div>
                       </div>

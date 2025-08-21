@@ -15,7 +15,7 @@ export const metadata = {
   openGraph: {
     title: 'BetTracker Pro - Professional Sports Betting Analytics',
     description: 'Track your sports bets and analyze your performance with professional-grade tools.',
-    url: 'http://localhost:3000',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://bettracker.pro',
     siteName: 'BetTracker Pro',
     type: 'website',
   },

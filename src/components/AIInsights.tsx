@@ -7,12 +7,17 @@ interface AIInsightsProps {
 }
 
 export default function AIInsights({ bets }: AIInsightsProps) {
-  const settledBets = bets.filter(bet => bet.result);
+  // Input validation
+  if (!Array.isArray(bets)) {
+    return <div className="card"><p className="text-gray-400">Invalid data</p></div>;
+  }
+  
+  const settledBets = bets.filter(bet => bet && bet.result);
   
   const generateInsights = () => {
     const insights = [];
     
-    // Win rate analysis
+    // Win rate analysis with division by zero protection
     const winRate = settledBets.length > 0 ? (settledBets.filter(bet => bet.result === 'win').length / settledBets.length) * 100 : 0;
     
     if (winRate > 60) {
@@ -45,7 +50,7 @@ export default function AIInsights({ bets }: AIInsightsProps) {
     }, {} as Record<string, { wins: number; total: number; profit: number }>);
 
     const bestBetType = Object.entries(betTypes).reduce((best, [type, data]) => {
-      const winRate = data.wins / data.total;
+      const winRate = data.total > 0 ? data.wins / data.total : 0;
       return winRate > (best.winRate || 0) ? { type, winRate, profit: data.profit } : best;
     }, {} as any);
 
@@ -58,8 +63,8 @@ export default function AIInsights({ bets }: AIInsightsProps) {
       });
     }
 
-    // Stake size analysis
-    const avgStake = bets.reduce((sum, bet) => sum + bet.stake, 0) / bets.length;
+    // Stake size analysis with division by zero protection
+    const avgStake = bets.length > 0 ? bets.reduce((sum, bet) => sum + (bet.stake || 0), 0) / bets.length : 0;
     if (avgStake > 50) {
       insights.push({
         type: 'warning',

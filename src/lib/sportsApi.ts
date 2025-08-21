@@ -1,6 +1,19 @@
 // Free sports API integration
 const SPORTS_API_BASE = 'https://api.the-odds-api.com/v4';
-const API_KEY = process.env.NEXT_PUBLIC_ODDS_API_KEY || 'YOUR_API_KEY';
+
+// Validate API base URL to prevent SSRF
+const isValidApiUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === 'api.the-odds-api.com' && parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+if (!isValidApiUrl(SPORTS_API_BASE)) {
+  throw new Error('Invalid API base URL');
+}
 
 export interface Game {
   id: string;
@@ -30,26 +43,46 @@ export interface Outcome {
   point?: number; // For spreads and totals
 }
 
+// Input validation
+const validateSportKey = (sport: string): boolean => {
+  const validSports = getSportsList().map(s => s.key);
+  return validSports.includes(sport);
+};
+
+const validateMarkets = (markets: string): boolean => {
+  const validMarkets = getBettingMarkets().map(m => m.key);
+  const marketList = markets.split(',');
+  return marketList.every(market => validMarkets.includes(market.trim()));
+};
+
 export const fetchLiveGames = async (sport = 'americanfootball_nfl', markets = 'h2h,spreads,totals'): Promise<Game[]> => {
-  if (!API_KEY || API_KEY === 'YOUR_API_KEY') {
-    console.warn('Add your API key to .env.local to see real FanDuel odds');
-    return [];
+  // Input validation
+  if (!validateSportKey(sport)) {
+    throw new Error('Invalid sport key');
+  }
+  
+  if (!validateMarkets(markets)) {
+    throw new Error('Invalid markets parameter');
   }
   
   try {
-    const response = await fetch(
-      `${SPORTS_API_BASE}/sports/${sport}/odds/?apiKey=${API_KEY}&regions=us&markets=${markets}&oddsFormat=american&bookmakers=fanduel`
-    );
+    // Use server-side API route to avoid exposing API key
+    const response = await fetch('/api/odds', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sport, markets })
+    });
     
     if (!response.ok) {
-      console.error(`FanDuel API error: ${response.status}`);
-      return [];
+      throw new Error(`API error: ${response.status}`);
     }
     
     const data = await response.json();
-    return data || [];
+    return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('FanDuel API error:', error);
+    console.error('API error:', error);
     return [];
   }
 };

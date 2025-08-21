@@ -18,13 +18,35 @@ export default function BetForm({ onAddBet }: BetFormProps) {
     notes: ''
   });
 
+  const sanitizeInput = (input: string): string => {
+    return input.replace(/[<>"'&]/g, '').trim().slice(0, 100);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Input validation
+    const odds = parseFloat(formData.odds);
+    const stake = parseFloat(formData.stake);
+    
+    if (!isFinite(odds) || !isFinite(stake) || stake <= 0) {
+      alert('Please enter valid odds and stake amounts');
+      return;
+    }
+    
+    if (stake > 10000) {
+      alert('Stake amount too large');
+      return;
+    }
+    
     const bet: Omit<Bet, 'id'> = {
-      ...formData,
-      odds: parseFloat(formData.odds),
-      stake: parseFloat(formData.stake),
+      sport: sanitizeInput(formData.sport),
+      team: sanitizeInput(formData.team),
+      opponent: sanitizeInput(formData.opponent),
+      betType: formData.betType,
+      odds,
+      stake,
+      notes: sanitizeInput(formData.notes),
       date: new Date().toISOString().split('T')[0]
     };
     
@@ -103,6 +125,8 @@ export default function BetForm({ onAddBet }: BetFormProps) {
               onChange={(e) => setFormData({...formData, team: e.target.value})}
               className="input-field"
               placeholder="e.g., Lakers"
+              maxLength={50}
+              pattern="[A-Za-z0-9\s-]+"
               required
             />
           </div>
@@ -117,6 +141,8 @@ export default function BetForm({ onAddBet }: BetFormProps) {
               onChange={(e) => setFormData({...formData, opponent: e.target.value})}
               className="input-field"
               placeholder="e.g., Warriors"
+              maxLength={50}
+              pattern="[A-Za-z0-9\s-]+"
               required
             />
           </div>
@@ -133,6 +159,8 @@ export default function BetForm({ onAddBet }: BetFormProps) {
               onChange={(e) => setFormData({...formData, odds: e.target.value})}
               className="input-field"
               placeholder="e.g., -110 or +150"
+              min="-10000"
+              max="10000"
               required
             />
           </div>
@@ -148,6 +176,8 @@ export default function BetForm({ onAddBet }: BetFormProps) {
               onChange={(e) => setFormData({...formData, stake: e.target.value})}
               className="input-field"
               placeholder="e.g., 25.00"
+              min="0.01"
+              max="10000"
               required
             />
           </div>
@@ -163,6 +193,7 @@ export default function BetForm({ onAddBet }: BetFormProps) {
             className="input-field resize-none"
             rows={3}
             placeholder="Any additional notes..."
+            maxLength={500}
           />
         </div>
 
