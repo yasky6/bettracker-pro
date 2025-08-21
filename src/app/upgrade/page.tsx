@@ -18,12 +18,24 @@ export default function UpgradePage() {
         })
       });
       
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Checkout failed');
+        throw new Error(`API Error: ${response.status} - ${responseText}`);
       }
       
-      const { sessionId } = await response.json();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
+      }
+      
+      const { sessionId } = responseData;
       
       if (!sessionId) {
         throw new Error('No session ID received');
