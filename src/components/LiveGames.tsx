@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Game, fetchLiveGames, getSportsList, getBettingMarkets } from '@/lib/sportsApi';
 import { format } from 'date-fns';
 import LoadingSpinner from './LoadingSpinner';
+
+const QuickAddTooltip = (
+  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+    Quick add to betting tracker
+  </div>
+);
 
 interface LiveGamesProps {
   onQuickBet: (game: Game, team: string, odds: number) => void;
@@ -23,18 +29,24 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
 
   const loadGames = async () => {
     setLoading(true);
-    const gamesData = await fetchLiveGames(selectedSport, selectedMarkets);
-    setGames(gamesData);
-    setLoading(false);
+    try {
+      const gamesData = await fetchLiveGames(selectedSport, selectedMarkets);
+      setGames(Array.isArray(gamesData) ? gamesData : []);
+    } catch (error) {
+      console.error('Error loading games:', error);
+      setGames([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getFilteredGames = () => {
+  const filteredGames = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     const monthFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    let filteredGames = games.filter(game => {
+    let filtered = games.filter(game => {
       const gameDate = new Date(game.commence_time);
       
       switch (dateFilter) {
@@ -49,15 +61,18 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
       }
     });
 
-    // Filter by team if selected
+    // Sanitize selectedTeam to prevent injection
     if (selectedTeam) {
-      filteredGames = filteredGames.filter(game => 
-        game.home_team === selectedTeam || game.away_team === selectedTeam
-      );
+      const sanitizedTeam = selectedTeam.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+      if (sanitizedTeam) {
+        filtered = filtered.filter(game => 
+          game.home_team === sanitizedTeam || game.away_team === sanitizedTeam
+        );
+      }
     }
 
-    return filteredGames;
-  };
+    return filtered;
+  }, [games, dateFilter, selectedTeam]);
 
   const getAvailableTeams = () => {
     const teams = new Set<string>();
@@ -132,9 +147,12 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
             className="input-field text-sm py-2 px-3 min-w-40"
           >
             <option value="">All Teams</option>
-            {getAvailableTeams().map(team => (
-              <option key={team} value={team}>{team}</option>
-            ))}
+            {getAvailableTeams().map(team => {
+              const sanitizedTeam = team.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+              return (
+                <option key={sanitizedTeam} value={sanitizedTeam}>{sanitizedTeam}</option>
+              );
+            })}
           </select>
           
           <button
@@ -161,7 +179,7 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
 
       {loading ? (
         <LoadingSpinner size="lg" text="Loading live games..." />
-      ) : getFilteredGames().length === 0 ? (
+      ) : filteredGames.length === 0 ? (
         <div className="text-center py-12">
           <div className="w-20 h-20 bg-gradient-to-br from-gray-700 to-gray-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +191,7 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {getFilteredGames().map((game) => (
+          {filteredGames.map((game) => (
             <div key={game.id} className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
@@ -217,9 +235,7 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
                               title="Quick add to betting tracker"
                             >
                               Quick Add
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                                Quick add to betting tracker
-                              </div>
+                              {QuickAddTooltip}
                             </button>
                           </div>
                         ) : (
@@ -251,9 +267,7 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
                               title="Quick add to betting tracker"
                             >
                               Quick Add
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                                Quick add to betting tracker
-                              </div>
+                              {QuickAddTooltip}
                             </button>
                           </div>
                         ) : (
