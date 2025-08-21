@@ -8,6 +8,14 @@ export async function POST(request: NextRequest) {
     if (!API_KEY) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
+    
+    // Additional CSRF check
+    const referer = request.headers.get('referer');
+    const host = request.headers.get('host');
+    
+    if (!referer || !referer.includes(host || '')) {
+      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
 
     const { sport, markets } = await request.json();
 

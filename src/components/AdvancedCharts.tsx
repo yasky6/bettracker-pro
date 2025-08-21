@@ -16,81 +16,51 @@ export default function AdvancedCharts({ bets }: AdvancedChartsProps) {
   const [betTypeTimePeriod, setBetTypeTimePeriod] = useState<string>('all');
   const settledBets = bets.filter(bet => bet.result);
   
-  // Filter bets for profit chart
-  const getProfitFilteredBets = () => {
+  // Utility function for date filtering
+  const getDateFilter = (period: string) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    return settledBets.filter(bet => {
-      const betDate = new Date(bet.date);
-      
-      switch (profitTimePeriod) {
-        case 'daily':
-          return betDate >= today;
-        case 'weekly':
-          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return betDate >= weekAgo;
-        case 'monthly':
-          const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return betDate >= monthAgo;
-        case 'yearly':
-          const yearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
-          return betDate >= yearAgo;
-        case 'yoy':
-          const lastYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-          return betDate >= lastYear;
-        default:
-          return true;
-      }
-    });
+    switch (period) {
+      case 'daily':
+        return today;
+      case 'weekly':
+        return new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'monthly':
+        return new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case 'yearly':
+        return new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+      case 'yoy':
+        return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      default:
+        return null;
+    }
   };
 
-  // Profit/Loss over time
-  const profitFilteredBets = getProfitFilteredBets();
-  const profitData = profitFilteredBets.map((bet, index) => {
-    const profit = bet.result === 'win' ? ((bet.payout || 0) - bet.stake) : -bet.stake;
-    const runningTotal = profitFilteredBets.slice(0, index + 1).reduce((sum, b) => {
-      return sum + (b.result === 'win' ? ((b.payout || 0) - b.stake) : -b.stake);
-    }, 0);
+  const filterBetsByPeriod = (bets: Bet[], period: string) => {
+    const cutoffDate = getDateFilter(period);
+    if (!cutoffDate) return bets;
     
-    return {
+    return bets.filter(bet => new Date(bet.date) >= cutoffDate);
+  };
+
+  // Profit/Loss over time with O(n) complexity
+  const profitFilteredBets = filterBetsByPeriod(settledBets, profitTimePeriod);
+  const profitData = profitFilteredBets.reduce((acc, bet, index) => {
+    const profit = bet.result === 'win' ? ((bet.payout || 0) - bet.stake) : -bet.stake;
+    const runningTotal = (acc[index - 1]?.profit || 0) + profit;
+    
+    acc.push({
       bet: index + 1,
       profit: runningTotal,
       date: bet.date
-    };
-  });
-
-  // Filter bets by time period
-  const getFilteredBets = () => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    return settledBets.filter(bet => {
-      const betDate = new Date(bet.date);
-      
-      switch (timePeriod) {
-        case 'daily':
-          return betDate >= today;
-        case 'weekly':
-          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return betDate >= weekAgo;
-        case 'monthly':
-          const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return betDate >= monthAgo;
-        case 'yearly':
-          const yearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
-          return betDate >= yearAgo;
-        case 'yoy':
-          const lastYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-          return betDate >= lastYear;
-        default:
-          return true;
-      }
     });
-  };
+    
+    return acc;
+  }, [] as Array<{ bet: number; profit: number; date: string }>);
 
   // Win rate by sport (filtered by time period)
-  const filteredBets = getFilteredBets();
+  const filteredBets = filterBetsByPeriod(settledBets, timePeriod);
   const sportData = filteredBets.length > 0 ? Object.entries(
     filteredBets.reduce((acc, bet) => {
       if (!acc[bet.sport]) acc[bet.sport] = { wins: 0, total: 0 };
@@ -220,34 +190,10 @@ export default function AdvancedCharts({ bets }: AdvancedChartsProps) {
             <PieChart>
               <Pie
                 data={(() => {
-                  const now = new Date();
-                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                  
-                  const filteredBets = bets.filter(bet => {
-                    const betDate = new Date(bet.date);
-                    
-                    switch (betTypeTimePeriod) {
-                      case 'daily':
-                        return betDate >= today;
-                      case 'weekly':
-                        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        return betDate >= weekAgo;
-                      case 'monthly':
-                        const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-                        return betDate >= monthAgo;
-                      case 'yearly':
-                        const yearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
-                        return betDate >= yearAgo;
-                      case 'yoy':
-                        const lastYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-                        return betDate >= lastYear;
-                      default:
-                        return true;
-                    }
-                  });
+                  const betTypeFilteredBets = filterBetsByPeriod(bets, betTypeTimePeriod);
                   
                   return Object.entries(
-                    filteredBets.reduce((acc, bet) => {
+                    betTypeFilteredBets.reduce((acc, bet) => {
                       acc[bet.betType] = (acc[bet.betType] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>)
@@ -260,9 +206,19 @@ export default function AdvancedCharts({ bets }: AdvancedChartsProps) {
                 dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
               >
-                {sportData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
+                {(() => {
+                  const betTypeFilteredBets = filterBetsByPeriod(bets, betTypeTimePeriod);
+                  const pieData = Object.entries(
+                    betTypeFilteredBets.reduce((acc, bet) => {
+                      acc[bet.betType] = (acc[bet.betType] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>)
+                  ).map(([type, count]) => ({ name: type, value: count }));
+                  
+                  return pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ));
+                })()}
               </Pie>
               <Tooltip />
             </PieChart>
