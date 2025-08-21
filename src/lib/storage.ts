@@ -14,7 +14,7 @@ export const saveBets = (bets: Bet[]): void => {
       const sanitizedBets = bets.map(bet => ({
         ...bet,
         team: typeof bet.team === 'string' ? bet.team.slice(0, 100) : '',
-        market: typeof bet.market === 'string' ? bet.market.slice(0, 50) : '',
+        opponent: typeof bet.opponent === 'string' ? bet.opponent.slice(0, 100) : '',
         odds: typeof bet.odds === 'number' && isFinite(bet.odds) ? bet.odds : 0,
         stake: typeof bet.stake === 'number' && isFinite(bet.stake) ? bet.stake : 0
       }));
