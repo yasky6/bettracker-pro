@@ -13,7 +13,7 @@ export default function UpgradePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: 'price_1RyMPEKyNQrG71ncrDPq5CKe',
+          priceId: 'prod_SuAkbSXuaYcS1E',
           email: user.email || 'user@example.com'
         })
       });
