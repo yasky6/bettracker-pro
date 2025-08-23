@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Bet } from '@/types';
-import { saveBets, loadBets, calculateStats } from '@/lib/storage';
+import { calculateStats } from '@/lib/database';
+import { useBets, useCreateBet, useUpdateBet, useDeleteBet } from '@/hooks/useBets';
+import { useBetStore } from '@/stores/betStore';
 import BetForm from '@/components/BetForm';
 import StatsCards from '@/components/StatsCards';
 import BetsList from '@/components/BetsList';
@@ -11,47 +13,27 @@ import ESPNScores from '@/components/ESPNScores';
 import AdvancedCharts from '@/components/AdvancedCharts';
 import AIInsights from '@/components/AIInsights';
 import LiveAlerts from '@/components/LiveAlerts';
+import AdvancedAnalytics from '@/components/AdvancedAnalytics';
 import { Game } from '@/lib/sportsApi';
+import toast from 'react-hot-toast';
 
 export default function Home() {
-  const [bets, setBets] = useState<Bet[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { status } = useSession();
+  
+  // Use React Query hooks for data management
+  const { bets, isLoading, error, refetch } = useBets();
+  const createBetMutation = useCreateBet();
+  const updateBetMutation = useUpdateBet();
+  const deleteBetMutation = useDeleteBet();
+  
+  // Access Zustand store for computed values
+  const { stats: storeStats } = useBetStore();
 
-  useEffect(() => {
-    const loadedBets = loadBets();
-    setBets(loadedBets);
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      saveBets(bets);
-    }
-  }, [bets, isLoaded]);
-
-  const addBet = (betData: Omit<Bet, 'id'>) => {
-    if (bets.length >= freePlanLimit) {
-      if (confirm('Free plan limit reached! You need to subscribe to Pro for unlimited bets. Go to upgrade page?')) {
-        window.location.href = '/upgrade';
-      }
-      return;
-    }
-    
-    const newBet: Bet = {
-      ...betData,
-      id: Date.now().toString()
-    };
-    setBets(prev => [newBet, ...prev]);
+  const addBet = async (betData: Omit<Bet, 'id'>) => {
+    createBetMutation.mutate(betData);
   };
 
-  const handleQuickBet = (game: Game, team: string, odds: number) => {
-    if (bets.length >= freePlanLimit) {
-      if (confirm('Free plan limit reached! You need to subscribe to Pro for unlimited bets. Go to upgrade page?')) {
-        window.location.href = '/upgrade';
-      }
-      return;
-    }
-    
+  const handleQuickBet = async (game: Game, team: string, odds: number) => {
     const opponent = team === game.home_team ? game.away_team : game.home_team;
     const betData: Omit<Bet, 'id'> = {
       sport: game.sport_title,
@@ -63,20 +45,77 @@ export default function Home() {
       date: new Date().toISOString().split('T')[0],
       notes: `Quick bet from live games - ${game.bookmakers?.[0]?.title || 'Live odds'}`
     };
-    addBet(betData);
+    await addBet(betData);
   };
 
-  const updateBet = (id: string, result: 'win' | 'loss' | 'push', payout?: number) => {
-    setBets(prev => prev.map(bet => 
-      bet.id === id ? { ...bet, result, payout } : bet
-    ));
+  const updateBet = async (id: string, result: 'win' | 'loss' | 'push', payout?: number) => {
+    updateBetMutation.mutate({ id, updates: { result, payout } });
   };
 
-  const deleteBet = (betId: string) => {
-    if (confirm('Are you sure you want to delete this bet?')) {
-      setBets(prev => prev.filter(bet => bet.id !== betId));
-    }
+  const deleteBet = async (betId: string) => {
+    toast((t) => (
+      <div className="flex flex-col space-y-3">
+        <p className="font-medium">Delete this bet?</p>
+        <p className="text-sm text-gray-300">This action cannot be undone.</p>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              deleteBetMutation.mutate(betId);
+            }}
+            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium"
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: 10000 });
   };
+
+  // Show login prompt if not authenticated
+  if (status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="card text-center max-w-md mx-auto">
+          <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-black text-white mb-4">Welcome to BetTracker Pro</h2>
+          <p className="text-gray-400 mb-8">
+            Sign in to start tracking your sports bets and analyzing your performance.
+          </p>
+          <div className="space-y-4">
+            <a href="/login" className="btn-primary w-full text-center block">
+              Sign In
+            </a>
+            <a href="/signup" className="btn-secondary w-full text-center block">
+              Create Account
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading your bets...</p>
+        </div>
+      </div>
+    );
+  }
 
   const stats = calculateStats(bets);
   const freePlanLimit = 15;
@@ -84,6 +123,24 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-900/20 border border-red-500/30 rounded-2xl p-4">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-red-300">{String(error)}</p>
+            <button 
+              onClick={() => refetch()}
+              className="ml-auto bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm font-medium"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Free Plan Warning */}
       {bets.length >= freePlanLimit - 2 && (
         <div className="bg-gradient-to-r from-amber-900/20 to-orange-900/20 backdrop-blur-sm border border-amber-500/30 rounded-2xl p-6 shadow-2xl">
@@ -125,6 +182,9 @@ export default function Home() {
 
       {/* ESPN Scores */}
       <ESPNScores />
+
+      {/* Advanced Analytics */}
+      <AdvancedAnalytics bets={bets} />
 
       {/* Pro Features */}
       <AdvancedCharts bets={bets} />

@@ -1,6 +1,11 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import Logo from '@/components/Logo'
+import SessionProvider from '@/components/SessionProvider'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import ToastProvider from '@/components/ToastProvider'
+import QueryProvider from '@/components/QueryProvider'
+import PWAProvider from '@/components/PWAProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -35,8 +40,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0891b2" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="BetTracker Pro" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
       <body className={inter.className}>
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
+        <PWAProvider>
+          <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
           <nav className="bg-gray-900/95 backdrop-blur-xl shadow-2xl border-b border-gray-700/50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between h-20">
@@ -61,9 +75,16 @@ export default function RootLayout({
               </div>
             </div>
           </nav>
-          <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            {children}
-          </main>
+          <ErrorBoundary>
+            <QueryProvider>
+              <SessionProvider>
+                <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                  {children}
+                </main>
+              </SessionProvider>
+              <ToastProvider />
+            </QueryProvider>
+          </ErrorBoundary>
           
           <footer className="bg-gray-900/95 backdrop-blur-xl border-t border-gray-700/50 mt-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -79,7 +100,8 @@ export default function RootLayout({
               </div>
             </div>
           </footer>
-        </div>
+          </div>
+        </PWAProvider>
       </body>
     </html>
   )

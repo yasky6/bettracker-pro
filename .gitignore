@@ -1,6 +1,10 @@
 ﻿node_modules/
 .next/
+.env
 .env.local
+.env.production
 *.log
 dist/
 build/
+
+/generated/prisma

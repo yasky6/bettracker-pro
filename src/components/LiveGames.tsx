@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Game, fetchLiveGames, getSportsList, getBettingMarkets } from '@/lib/sportsApi';
 import { format } from 'date-fns';
-import LoadingSpinner from './LoadingSpinner';
+
 
 const QuickAddTooltip = (
   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
@@ -178,7 +178,12 @@ export default function LiveGames({ onQuickBet }: LiveGamesProps) {
       </div>
 
       {loading ? (
-        <LoadingSpinner size="lg" text="Loading live games..." />
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gradient-to-br from-gray-700 to-gray-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <div className="w-8 h-8 border-4 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Loading live games...</h3>
+        </div>
       ) : filteredGames.length === 0 ? (
         <div className="text-center py-12">
           <div className="w-20 h-20 bg-gradient-to-br from-gray-700 to-gray-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
